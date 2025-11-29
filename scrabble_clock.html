@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
+    <title>Scrabble Chess Clock</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body, button, input {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #game-container {
+            flex: 1;
+            display: flex;
+            flex-direction: row;
+            height: 50vh;
+        }
+
+        .player-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: #2c3e50;
+            border-right: 2px solid #1a1a1a;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            position: relative;
+            touch-action: manipulation;
+        }
+
+        .player-name, .player-time {
+            pointer-events: none;
+        }
+
+        .player-section:last-child {
+            border-right: none;
+        }
+
+        .player-section.active {
+            background: #27ae60;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .player-section.warning {
+            background: #e67e22;
+        }
+
+        .player-section.timeup {
+            background: #e74c3c;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.85; }
+        }
+
+        .player-name {
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .player-time {
+            font-size: clamp(3rem, 10vw, 6rem);
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            letter-spacing: 0.1em;
+        }
+
+        .timeup-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(2rem, 6vw, 4rem);
+            font-weight: bold;
+            animation: blink 1s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        #control-bar {
+            background: #34495e;
+            padding: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            justify-content: center;
+            align-items: stretch;
+            height: 50vh;
+        }
+
+        button {
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #next-player-btn {
+            background: #3498db;
+            color: white;
+            flex: 1;
+            width: 100%;
+            font-size: clamp(4rem, 10vw, 8rem);
+            font-weight: bold;
+            border-radius: 12px;
+        }
+
+        #next-player-btn:disabled {
+            background: #7f8c8d;
+        }
+
+        .secondary-controls {
+            display: flex;
+            gap: 0.5rem;
+            height: 60px;
+        }
+
+        #start-pause-btn {
+            background: #27ae60;
+            color: white;
+            flex: 1;
+        }
+
+        #start-pause-btn.paused {
+            background: #e67e22;
+        }
+
+        #reset-btn {
+            background: #e74c3c;
+            color: white;
+            flex: 1;
+        }
+
+        #settings-btn {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            background: #34495e;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            z-index: 100;
+            padding: 0;
+        }
+
+        #settings-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            z-index: 200;
+        }
+
+        #settings-overlay.show {
+            display: block;
+        }
+
+        #settings-panel {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 90%;
+            max-width: 400px;
+            height: 100vh;
+            background: #2c3e50;
+            padding: 2rem;
+            transition: right 0.3s ease;
+            overflow-y: auto;
+            z-index: 201;
+        }
+
+        #settings-panel.show {
+            right: 0;
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .settings-header h2 {
+            font-size: 1.8rem;
+        }
+
+        #close-settings {
+            background: #e74c3c;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            padding: 0;
+        }
+
+        .setting-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .setting-group label {
+            display: block;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            color: #ecf0f1;
+        }
+
+        .setting-group input {
+            width: 100%;
+            padding: 0.8rem;
+            font-size: 1.1rem;
+            border: 2px solid #34495e;
+            border-radius: 6px;
+            background: #34495e;
+            color: white;
+        }
+
+        .setting-group input:focus {
+            outline: none;
+            border-color: #27ae60;
+        }
+
+        .player-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .time-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        #start-game-btn {
+            width: 100%;
+            background: #27ae60;
+            color: white;
+            padding: 1.2rem;
+            font-size: 1.3rem;
+            margin-top: 1rem;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        #elapsed-time {
+            color: #95a5a6;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <button id="settings-btn">⚙️</button>
+
+    <div id="game-container">
+        <!-- Player sections will be dynamically added here -->
+    </div>
+
+    <div id="control-bar">
+        <button id="next-player-btn">NEXT PLAYER</button>
+        <div class="secondary-controls">
+            <button id="start-pause-btn">Start</button>
+            <button id="reset-btn">Reset</button>
+            <span id="elapsed-time"></span>
+        </div>
+    </div>
+
+    <div id="settings-overlay"></div>
+    <div id="settings-panel">
+        <div class="settings-header">
+            <h2>Settings</h2>
+            <button id="close-settings">×</button>
+        </div>
+
+        <div class="setting-group">
+            <label>Player Names (leave blank to exclude)</label>
+            <div class="player-inputs">
+                <input type="text" id="player1-name" placeholder="Player 1">
+                <input type="text" id="player2-name" placeholder="Player 2">
+                <input type="text" id="player3-name" placeholder="Player 3">
+                <input type="text" id="player4-name" placeholder="Player 4">
+            </div>
+            <div class="error-message" id="players-error">Enter at least 2 player names</div>
+        </div>
+
+        <div class="setting-group">
+            <div class="time-inputs">
+                <div>
+                    <label>Initial Time (minutes)</label>
+                    <input type="number" id="initial-time" min="1" max="999" value="25">
+                </div>
+                <div>
+                    <label>Increment (seconds)</label>
+                    <input type="number" id="increment" min="0" max="999" value="0">
+                </div>
+            </div>
+        </div>
+
+        <button id="start-game-btn">Start Game</button>
+    </div>
+
+    <script>
+        // Game state
+        let players = [];
+        let activePlayerIndex = 0;
+        let gameState = 'setup'; // setup, running, paused
+        let intervalId = null;
+        let wakeLock = null;
+        let gameStartTime = null;
+        let totalPausedTime = 0;
+        let pauseStartTime = null;
+
+        // Settings
+        let initialTimeMs = 25 * 60 * 1000;
+        let incrementMs = 0;
+
+        // DOM elements
+        const gameContainer = document.getElementById('game-container');
+        const settingsBtn = document.getElementById('settings-btn');
+        const settingsOverlay = document.getElementById('settings-overlay');
+        const settingsPanel = document.getElementById('settings-panel');
+        const closeSettings = document.getElementById('close-settings');
+        const startPauseBtn = document.getElementById('start-pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const startGameBtn = document.getElementById('start-game-btn');
+        const elapsedTimeDisplay = document.getElementById('elapsed-time');
+
+        // Initialize
+        loadSettings();
+        showSettings();
+
+        // Event listeners
+        settingsBtn.addEventListener('click', () => {
+            if (gameState === 'running') {
+                if (!confirm('Pause game to change settings?')) return;
+                pauseGame();
+            }
+            showSettings();
+        });
+
+        closeSettings.addEventListener('click', hideSettings);
+        settingsOverlay.addEventListener('click', hideSettings);
+
+        startGameBtn.addEventListener('click', initializeGame);
+        startPauseBtn.addEventListener('click', toggleStartPause);
+        resetBtn.addEventListener('click', resetGame);
+
+        const nextPlayerBtn = document.getElementById('next-player-btn');
+        nextPlayerBtn.addEventListener('click', () => {
+            handlePlayerClick(activePlayerIndex);
+        });
+
+        function showSettings() {
+            settingsOverlay.classList.add('show');
+            settingsPanel.classList.add('show');
+        }
+
+        function hideSettings() {
+            settingsOverlay.classList.remove('show');
+            settingsPanel.classList.remove('show');
+        }
+
+        function loadSettings() {
+            const saved = localStorage.getItem('scrabbleClockSettings');
+            if (saved) {
+                const settings = JSON.parse(saved);
+                document.getElementById('player1-name').value = settings.player1 || '';
+                document.getElementById('player2-name').value = settings.player2 || '';
+                document.getElementById('player3-name').value = settings.player3 || '';
+                document.getElementById('player4-name').value = settings.player4 || '';
+                document.getElementById('initial-time').value = settings.initialTime || 25;
+                document.getElementById('increment').value = settings.increment || 0;
+            }
+        }
+
+        function saveSettings() {
+            const settings = {
+                player1: document.getElementById('player1-name').value,
+                player2: document.getElementById('player2-name').value,
+                player3: document.getElementById('player3-name').value,
+                player4: document.getElementById('player4-name').value,
+                initialTime: parseInt(document.getElementById('initial-time').value),
+                increment: parseInt(document.getElementById('increment').value)
+            };
+            localStorage.setItem('scrabbleClockSettings', JSON.stringify(settings));
+        }
+
+        function initializeGame() {
+            // Get player names
+            const playerNames = [
+                document.getElementById('player1-name').value.trim(),
+                document.getElementById('player2-name').value.trim(),
+                document.getElementById('player3-name').value.trim(),
+                document.getElementById('player4-name').value.trim()
+            ].filter(name => name !== '');
+
+            // Validate
+            const errorMsg = document.getElementById('players-error');
+            if (playerNames.length < 2) {
+                errorMsg.classList.add('show');
+                return;
+            }
+            errorMsg.classList.remove('show');
+
+            // Get time settings
+            const initialMinutes = parseInt(document.getElementById('initial-time').value);
+            const incrementSeconds = parseInt(document.getElementById('increment').value);
+
+            if (initialMinutes < 1 || initialMinutes > 999) {
+                alert('Initial time must be between 1 and 999 minutes');
+                return;
+            }
+
+            if (incrementSeconds < 0 || incrementSeconds > 999) {
+                alert('Increment must be between 0 and 999 seconds');
+                return;
+            }
+
+            initialTimeMs = initialMinutes * 60 * 1000;
+            incrementMs = incrementSeconds * 1000;
+
+            // Save settings
+            saveSettings();
+
+            // Initialize players
+            players = playerNames.map(name => ({
+                name,
+                timeMs: initialTimeMs,
+                isActive: false,
+                isFinished: false
+            }));
+
+            activePlayerIndex = 0;
+            gameState = 'setup';
+            gameStartTime = null;
+            totalPausedTime = 0;
+
+            // Render game
+            renderGame();
+            hideSettings();
+
+            // Update button
+            startPauseBtn.textContent = 'Start';
+            startPauseBtn.classList.remove('paused');
+        }
+
+        function renderGame() {
+            gameContainer.innerHTML = '';
+
+            players.forEach((player, index) => {
+                const section = document.createElement('div');
+                section.className = 'player-section';
+                if (index === activePlayerIndex && gameState === 'running') {
+                    section.classList.add('active');
+                }
+
+                const timeInSeconds = Math.ceil(player.timeMs / 1000);
+                const minutes = Math.floor(timeInSeconds / 60);
+                const seconds = timeInSeconds % 60;
+                const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+                if (player.isFinished) {
+                    section.classList.add('timeup');
+                    section.innerHTML = `
+                        <div class="player-name">${player.name}</div>
+                        <div class="timeup-message">TIME'S UP!</div>
+                    `;
+                } else {
+                    if (timeInSeconds < 60 && timeInSeconds > 0) {
+                        section.classList.add('warning');
+                    }
+                    section.innerHTML = `
+                        <div class="player-name">${player.name}</div>
+                        <div class="player-time">${timeString}</div>
+                    `;
+                }
+
+                section.addEventListener('click', () => handlePlayerClick(index));
+                gameContainer.appendChild(section);
+            });
+        }
+
+        function handlePlayerClick(index) {
+            if (gameState !== 'running') return;
+            if (index !== activePlayerIndex) return;
+            if (players[index].isFinished) return;
+
+            // Add increment
+            players[index].timeMs += incrementMs;
+
+            // Move to next player
+            let nextIndex = (activePlayerIndex + 1) % players.length;
+            while (players[nextIndex].isFinished && nextIndex !== activePlayerIndex) {
+                nextIndex = (nextIndex + 1) % players.length;
+            }
+
+            activePlayerIndex = nextIndex;
+            renderGame();
+        }
+
+        function toggleStartPause() {
+            if (players.length === 0) {
+                alert('Configure game settings first');
+                showSettings();
+                return;
+            }
+
+            if (gameState === 'setup') {
+                startGame();
+            } else if (gameState === 'running') {
+                pauseGame();
+            } else if (gameState === 'paused') {
+                resumeGame();
+            }
+        }
+
+        async function startGame() {
+            gameState = 'running';
+            gameStartTime = Date.now();
+            totalPausedTime = 0;
+            startPauseBtn.textContent = 'Pause';
+            startPauseBtn.classList.remove('paused');
+
+            // Request wake lock
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                }
+            } catch (err) {
+                // Wake lock not supported or failed
+            }
+
+            startTimer();
+            renderGame();
+        }
+
+        function pauseGame() {
+            gameState = 'paused';
+            pauseStartTime = Date.now();
+            startPauseBtn.textContent = 'Resume';
+            startPauseBtn.classList.add('paused');
+
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+
+            if (wakeLock) {
+                wakeLock.release();
+                wakeLock = null;
+            }
+
+            renderGame();
+        }
+
+        async function resumeGame() {
+            gameState = 'running';
+            totalPausedTime += Date.now() - pauseStartTime;
+            startPauseBtn.textContent = 'Pause';
+            startPauseBtn.classList.remove('paused');
+
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                }
+            } catch (err) {
+                // Wake lock not supported or failed
+            }
+
+            startTimer();
+            renderGame();
+        }
+
+        function startTimer() {
+            if (intervalId) clearInterval(intervalId);
+
+            intervalId = setInterval(() => {
+                const activePlayer = players[activePlayerIndex];
+
+                if (!activePlayer.isFinished) {
+                    activePlayer.timeMs -= 100;
+
+                    if (activePlayer.timeMs <= 0) {
+                        activePlayer.timeMs = 0;
+                        activePlayer.isFinished = true;
+                        playTimeUpSound();
+
+                        // Check if all players are finished
+                        const allFinished = players.every(p => p.isFinished);
+                        if (allFinished) {
+                            pauseGame();
+                        } else {
+                            // Move to next active player
+                            let nextIndex = (activePlayerIndex + 1) % players.length;
+                            while (players[nextIndex].isFinished && nextIndex !== activePlayerIndex) {
+                                nextIndex = (nextIndex + 1) % players.length;
+                            }
+                            activePlayerIndex = nextIndex;
+                        }
+                    }
+                }
+
+                renderGame();
+                updateElapsedTime();
+            }, 100);
+        }
+
+        function updateElapsedTime() {
+            if (!gameStartTime) {
+                elapsedTimeDisplay.textContent = '';
+                return;
+            }
+
+            const elapsed = Date.now() - gameStartTime - totalPausedTime;
+            const elapsedSeconds = Math.floor(elapsed / 1000);
+            const minutes = Math.floor(elapsedSeconds / 60);
+            const seconds = elapsedSeconds % 60;
+            elapsedTimeDisplay.textContent = `Elapsed: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function resetGame() {
+            if (gameState !== 'setup' && !confirm('Are you sure? This will reset all clocks.')) {
+                return;
+            }
+
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+
+            if (wakeLock) {
+                wakeLock.release();
+                wakeLock = null;
+            }
+
+            players.forEach(player => {
+                player.timeMs = initialTimeMs;
+                player.isFinished = false;
+            });
+
+            activePlayerIndex = 0;
+            gameState = 'setup';
+            gameStartTime = null;
+            totalPausedTime = 0;
+
+            startPauseBtn.textContent = 'Start';
+            startPauseBtn.classList.remove('paused');
+
+            renderGame();
+            updateElapsedTime();
+        }
+
+        function playTimeUpSound() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } catch (err) {
+                // Audio not supported or failed
+            }
+        }
+
+        // Handle visibility change to re-acquire wake lock
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible' && gameState === 'running') {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                } catch (err) {
+                    // Wake lock not supported or failed
+                }
+            }
+        });
+    </script>
+</body>
+</html>
