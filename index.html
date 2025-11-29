@@ -35,7 +35,8 @@
             flex: 1;
             display: flex;
             flex-direction: row;
-            height: 50vh;
+            min-height: 50vh;
+            max-height: 60vh;
         }
 
         .player-section {
@@ -108,13 +109,14 @@
 
         #control-bar {
             background: #34495e;
-            padding: 0.5rem;
+            padding: 0.25rem;
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 0.25rem;
             justify-content: center;
             align-items: stretch;
-            height: 50vh;
+            min-height: 40vh;
+            max-height: 50vh;
         }
 
         button {
@@ -152,8 +154,9 @@
 
         .secondary-controls {
             display: flex;
-            gap: 0.5rem;
-            height: 60px;
+            gap: 0.25rem;
+            min-height: 50px;
+            flex-shrink: 0;
         }
 
         #start-pause-btn {
@@ -212,10 +215,10 @@
             max-width: 400px;
             height: 100vh;
             background: #2c3e50;
-            padding: 2rem;
-            padding-bottom: 4rem;
+            padding: 1rem;
+            padding-bottom: 6rem;
             transition: right 0.3s ease;
-            overflow-y: auto;
+            overflow-y: scroll;
             -webkit-overflow-scrolling: touch;
             z-index: 201;
         }
@@ -228,7 +231,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
         }
 
         .settings-header h2 {
@@ -246,7 +249,7 @@
         }
 
         .setting-group {
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
         }
 
         .setting-group label {
